@@ -53,3 +53,13 @@ class ExportTemplateRepository:
             conn.commit()
 
         return template
+
+    def delete(self, template_id: int) -> None:
+        """指定IDのテンプレートを削除する。"""
+        conn = get_rules_db()
+        execute_with_retry(
+            conn,
+            "DELETE FROM export_templates WHERE id = ?",
+            (template_id,),
+        )
+        conn.commit()

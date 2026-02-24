@@ -266,9 +266,11 @@ class TicketDetailView(QWidget):
             w.setEnabled(editable)
 
     def set_default_start_date(self) -> None:
-        """Bug4: 新規チケットの開始日を本日にセットする。"""
+        """新規チケットの開始日・終了予定日を本日にセットする。"""
         from datetime import date
-        self._start_date_edit.set_iso_str(date.today().isoformat())
+        today = date.today().isoformat()
+        self._start_date_edit.set_iso_str(today)
+        self._end_date_edit.set_iso_str(today)
 
     def set_default_status(self, status_id: int | None) -> None:
         if status_id is None:
@@ -290,16 +292,18 @@ class _SmartDateEdit(QDateEdit):
     """Bug5: カレンダーポップアップを常に現在月で開く QDateEdit サブクラス。
 
     日付が minimumDate（「未設定」センチネル）の場合、
-    カレンダーのページを今日の年月に設定してから表示する。
+    super().showPopup() でポップアップを表示した後に setCurrentPage で
+    今日の年月へ移動する。先に setCurrentPage しても Qt が上書きするため
+    必ず super() の後に呼ぶ。
     """
 
     def showPopup(self) -> None:
+        super().showPopup()
         if self.date() == self.minimumDate():
             today = QDate.currentDate()
             cal = self.calendarWidget()
             if cal is not None:
                 cal.setCurrentPage(today.year(), today.month())
-        super().showPopup()
 
 
 class _OptionalDateEdit(QWidget):

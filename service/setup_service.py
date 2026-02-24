@@ -10,6 +10,43 @@ from service.auth_service import AuthService
 _RULES_DB_NAME = "rules.db"
 _WORK_DB_NAME = "work.db"
 
+# 新規プロジェクト作成時に挿入するサンプルテンプレート
+_SAMPLE_TEMPLATES: list[tuple[str, str]] = [
+    (
+        "進捗レポート",
+        """\
+チケット数: {{ tickets | length }} 件
+{% for t in tickets %}
+────────────────────────────
+[{{ t.number }}] {{ t.title }}
+  ステータス : {{ t.status }}
+  担当者     : {{ t.assignee }}
+  開始日     : {{ t.start_date if t.start_date else '未設定' }}
+  終了予定日 : {{ t.end_date if t.end_date else '未設定' }}
+{% if t.note %}  備考       : {{ t.note }}
+{% endif %}{% endfor %}\
+""",
+    ),
+    (
+        "ステータス別まとめ",
+        """\
+{% for status, group in tickets | groupby('status') %}
+## {{ status }}（{{ group | list | length }} 件）
+{% for t in group %}  - [{{ t.number }}] {{ t.title }}（{{ t.assignee }}）
+{% endfor %}{% endfor %}\
+""",
+    ),
+    (
+        "Markdown テーブル",
+        """\
+| チケット# | タイトル | ステータス | 担当者 | 開始日 | 終了予定日 |
+|---|---|---|---|---|---|
+{% for t in tickets %}| {{ t.number }} | {{ t.title }} | {{ t.status }} | {{ t.assignee }} | {{ t.start_date }} | {{ t.end_date }} |
+{% endfor %}\
+""",
+    ),
+]
+
 
 class SetupService:
     """新規プロジェクト（DBファイル一式）の作成を担当する。
@@ -86,6 +123,12 @@ class SetupService:
             close_ids = [s.id for s in all_statuses if s.name == "CLOSE"]
             if close_ids:
                 ss.update_default_hidden(close_ids)
+
+            # サンプルテンプレートを挿入
+            from service.export_service import ExportService
+            es = ExportService()
+            for tmpl_name, tmpl_body in _SAMPLE_TEMPLATES:
+                es.create_template(tmpl_name, tmpl_body)
 
         except Exception as exc:
             return ServiceResult.err(f"プロジェクト作成に失敗しました: {exc}")

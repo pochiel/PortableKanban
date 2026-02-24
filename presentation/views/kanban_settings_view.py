@@ -21,10 +21,12 @@ from PyQt6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
 
+from domain.export_template import ExportTemplate
 from domain.member import Member
 from domain.status import Status
 from domain.tag_definition import TagDefinition, FIELD_TYPE_TEXT, FIELD_TYPE_DATE
@@ -40,6 +42,7 @@ class KanbanSettingsView(QWidget):
         self._members: list[Member] = []
         self._statuses: list[Status] = []
         self._tags: list[TagDefinition] = []
+        self._templates: list[ExportTemplate] = []
         self._build_ui()
         self._presenter.on_load()
 
@@ -60,6 +63,7 @@ class KanbanSettingsView(QWidget):
         self._tabs.addTab(self._build_member_tab(), "担当者")
         self._tabs.addTab(self._build_status_tab(), "ステータス")
         self._tabs.addTab(self._build_tag_tab(), "タグ定義")
+        self._tabs.addTab(self._build_template_tab(), "テンプレート")
 
         layout = QVBoxLayout()
         layout.addWidget(self._tabs)
@@ -180,6 +184,42 @@ class KanbanSettingsView(QWidget):
         layout = QVBoxLayout()
         layout.addLayout(btn_layout)
         layout.addWidget(self._tag_table)
+        tab.setLayout(layout)
+        return tab
+
+    # ---------- タブ④: テンプレート管理 ----------
+
+    def _build_template_tab(self) -> QWidget:
+        tab = QWidget()
+
+        # テンプレート一覧
+        self._template_list = QListWidget()
+
+        # ボタン行
+        btn_layout = QHBoxLayout()
+        add_btn = QPushButton("追加")
+        edit_btn = QPushButton("編集")
+        delete_btn = QPushButton("削除")
+        add_btn.clicked.connect(self._on_add_template)
+        edit_btn.clicked.connect(self._on_edit_template)
+        delete_btn.clicked.connect(self._on_delete_template)
+        for btn in [add_btn, edit_btn, delete_btn]:
+            btn_layout.addWidget(btn)
+        btn_layout.addStretch()
+
+        # Jinja2 変数ヘルプラベル
+        help_label = QLabel(
+            "テンプレートで使用できる変数: "
+            "{{ t.number }}, {{ t.title }}, {{ t.status }}, {{ t.assignee }}, "
+            "{{ t.start_date }}, {{ t.end_date }}, {{ t.note }}, {{ t.tags['タグ名'] }}"
+        )
+        help_label.setWordWrap(True)
+        help_label.setStyleSheet("color: gray; font-size: 11px;")
+
+        layout = QVBoxLayout()
+        layout.addLayout(btn_layout)
+        layout.addWidget(self._template_list)
+        layout.addWidget(help_label)
         tab.setLayout(layout)
         return tab
 
@@ -319,6 +359,46 @@ class KanbanSettingsView(QWidget):
         return self._tags[row]
 
     # ------------------------------------------------------------------
+    # イベントハンドラ: テンプレートタブ
+    # ------------------------------------------------------------------
+
+    def _on_add_template(self) -> None:
+        dialog = _TemplateDialog(parent=self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self._presenter.on_add_template(dialog.get_name(), dialog.get_body())
+
+    def _on_edit_template(self) -> None:
+        tmpl = self._get_selected_template()
+        if tmpl is None:
+            self.show_error("編集するテンプレートを選択してください。")
+            return
+        dialog = _TemplateDialog(parent=self, name=tmpl.name, body=tmpl.template_body)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self._presenter.on_edit_template(
+                tmpl.id, dialog.get_name(), dialog.get_body()
+            )
+
+    def _on_delete_template(self) -> None:
+        tmpl = self._get_selected_template()
+        if tmpl is None:
+            self.show_error("削除するテンプレートを選択してください。")
+            return
+        reply = QMessageBox.question(
+            self,
+            "確認",
+            f"「{tmpl.name}」を削除しますか？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self._presenter.on_delete_template(tmpl.id)
+
+    def _get_selected_template(self) -> ExportTemplate | None:
+        row = self._template_list.currentRow()
+        if row < 0 or row >= len(self._templates):
+            return None
+        return self._templates[row]
+
+    # ------------------------------------------------------------------
     # Presenter から呼ばれるメソッド
     # ------------------------------------------------------------------
 
@@ -367,6 +447,12 @@ class KanbanSettingsView(QWidget):
             self._tag_table.setItem(
                 row, 1, QTableWidgetItem(type_labels.get(t.field_type, t.field_type))
             )
+
+    def load_templates(self, templates: list[ExportTemplate]) -> None:
+        self._templates = templates
+        self._template_list.clear()
+        for t in templates:
+            self._template_list.addItem(t.name)
 
     def show_error(self, message: str) -> None:
         self._status_label.setStyleSheet("color: red;")
@@ -516,3 +602,68 @@ class _TagDialog(QDialog):
 
     def get_field_type(self) -> str:
         return self._type_combo.currentData()
+
+
+class _TemplateDialog(QDialog):
+    """テンプレート追加・編集ダイアログ。名前と Jinja2 本文を入力する。"""
+
+    def __init__(
+        self,
+        parent: QWidget | None,
+        name: str = "",
+        body: str = "",
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("テンプレート編集")
+        self.setMinimumSize(640, 480)
+
+        self._name_input = QLineEdit(name)
+        self._name_input.setPlaceholderText("必須")
+
+        self._body_edit = QTextEdit()
+        self._body_edit.setPlainText(body)
+        self._body_edit.setFontFamily("Consolas, MS Gothic, monospace")
+        self._body_edit.setPlaceholderText(
+            "Jinja2 テンプレートを入力してください。\n"
+            "例:\n"
+            "{% for t in tickets %}\n"
+            "- [{{ t.number }}] {{ t.title }} / {{ t.status }}\n"
+            "{% endfor %}"
+        )
+
+        help_label = QLabel(
+            "利用可能変数: t.number, t.title, t.status, t.assignee, "
+            "t.start_date, t.end_date, t.note, t.tags['タグ名']"
+        )
+        help_label.setStyleSheet("color: gray; font-size: 11px;")
+        help_label.setWordWrap(True)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self._try_accept)
+        buttons.rejected.connect(self.reject)
+
+        form = QFormLayout()
+        form.addRow("テンプレート名:", self._name_input)
+
+        layout = QVBoxLayout()
+        layout.addLayout(form)
+        layout.addWidget(QLabel("テンプレート本文 (Jinja2):"))
+        layout.addWidget(self._body_edit, stretch=1)
+        layout.addWidget(help_label)
+        layout.addWidget(buttons)
+        self.setLayout(layout)
+
+    def _try_accept(self) -> None:
+        if self._name_input.text().strip() and self._body_edit.toPlainText().strip():
+            self.accept()
+        else:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "入力エラー", "テンプレート名と本文は必須です。")
+
+    def get_name(self) -> str:
+        return self._name_input.text()
+
+    def get_body(self) -> str:
+        return self._body_edit.toPlainText()

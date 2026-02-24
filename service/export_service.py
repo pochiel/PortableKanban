@@ -81,7 +81,7 @@ class ExportService:
 
         try:
             env = Environment(loader=BaseLoader())
-            tmpl = env.from_string(template.body)
+            tmpl = env.from_string(template.template_body)
             text = tmpl.render(tickets=ticket_dicts)
         except TemplateError as e:
             return ServiceResult.err(f"テンプレートのレンダリングに失敗しました: {e}")
@@ -96,3 +96,39 @@ class ExportService:
         except OSError as e:
             return ServiceResult.err(f"ファイルの書き込みに失敗しました: {e}")
         return ServiceResult.ok(output_path)
+
+    # ------------------------------------------------------------------
+    # テンプレート CRUD
+    # ------------------------------------------------------------------
+
+    def create_template(self, name: str, body: str) -> ServiceResult:
+        """テンプレートを新規作成する。"""
+        if not name.strip():
+            return ServiceResult.err("テンプレート名を入力してください。")
+        if not body.strip():
+            return ServiceResult.err("テンプレート本文を入力してください。")
+        t = ExportTemplate(name=name.strip(), template_body=body)
+        self._template_repo.save(t)
+        return ServiceResult.ok()
+
+    def update_template(self, template_id: int, name: str, body: str) -> ServiceResult:
+        """テンプレートを更新する。"""
+        if not name.strip():
+            return ServiceResult.err("テンプレート名を入力してください。")
+        if not body.strip():
+            return ServiceResult.err("テンプレート本文を入力してください。")
+        t = self._template_repo.find_by_id(template_id)
+        if t is None:
+            return ServiceResult.err(f"テンプレートID={template_id} が見つかりません。")
+        t.name = name.strip()
+        t.template_body = body
+        self._template_repo.save(t)
+        return ServiceResult.ok()
+
+    def delete_template(self, template_id: int) -> ServiceResult:
+        """テンプレートを削除する。"""
+        t = self._template_repo.find_by_id(template_id)
+        if t is None:
+            return ServiceResult.err(f"テンプレートID={template_id} が見つかりません。")
+        self._template_repo.delete(template_id)
+        return ServiceResult.ok()

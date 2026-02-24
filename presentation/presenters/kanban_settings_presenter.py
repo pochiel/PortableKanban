@@ -3,6 +3,7 @@
 from domain.member import Member
 from domain.status import Status
 from domain.tag_definition import TagDefinition
+from service.export_service import ExportService
 from service.member_service import MemberService
 from service.status_service import StatusService
 from service.tag_service import TagService
@@ -11,7 +12,7 @@ from service.tag_service import TagService
 class KanbanSettingsPresenter:
     """カンバン設定画面（SCR-003）のビジネスロジック仲介。
 
-    担当者・ステータス・タグ定義の CRUD を制御する。
+    担当者・ステータス・タグ定義・テンプレートの CRUD を制御する。
     """
 
     def __init__(self, view: object) -> None:
@@ -19,6 +20,7 @@ class KanbanSettingsPresenter:
         self._member_service = MemberService()
         self._status_service = StatusService()
         self._tag_service = TagService()
+        self._export_service = ExportService()
 
     # ------------------------------------------------------------------
     # 初期ロード
@@ -29,6 +31,7 @@ class KanbanSettingsPresenter:
         self._reload_members()
         self._reload_statuses()
         self._reload_tags()
+        self._reload_templates()
 
     # ------------------------------------------------------------------
     # 担当者操作
@@ -129,6 +132,34 @@ class KanbanSettingsPresenter:
             self._view.show_error(result.error_message)
 
     # ------------------------------------------------------------------
+    # テンプレート操作
+    # ------------------------------------------------------------------
+
+    def on_add_template(self, name: str, body: str) -> None:
+        result = self._export_service.create_template(name, body)
+        if result.is_ok:
+            self._view.show_success("テンプレートを追加しました。")
+            self._reload_templates()
+        else:
+            self._view.show_error(result.error_message)
+
+    def on_edit_template(self, template_id: int, name: str, body: str) -> None:
+        result = self._export_service.update_template(template_id, name, body)
+        if result.is_ok:
+            self._view.show_success("テンプレートを更新しました。")
+            self._reload_templates()
+        else:
+            self._view.show_error(result.error_message)
+
+    def on_delete_template(self, template_id: int) -> None:
+        result = self._export_service.delete_template(template_id)
+        if result.is_ok:
+            self._view.show_success("テンプレートを削除しました。")
+            self._reload_templates()
+        else:
+            self._view.show_error(result.error_message)
+
+    # ------------------------------------------------------------------
     # 内部リロードヘルパー
     # ------------------------------------------------------------------
 
@@ -141,3 +172,6 @@ class KanbanSettingsPresenter:
 
     def _reload_tags(self) -> None:
         self._view.load_tag_definitions(self._tag_service.get_all())
+
+    def _reload_templates(self) -> None:
+        self._view.load_templates(self._export_service.get_all_templates())
