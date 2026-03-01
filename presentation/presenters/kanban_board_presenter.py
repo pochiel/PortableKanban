@@ -149,10 +149,9 @@ class KanbanBoardPresenter:
             col_tickets = [t for t in tickets if t.status_id == status.id]
             columns.append(StatusColumn(status=status, tickets=col_tickets))
 
-        is_manager = self._role == "manager"
         self._view.render_board(
             columns=columns,
             member_map=member_map,
             prefix=self._prefix,
-            draggable=is_manager,
+            draggable=True,  # manager・member ともにドラッグ&ドロップ可
         )

@@ -125,7 +125,7 @@ class TestKanbanBoardOnLoad:
         presenter.on_load()
 
         assert view.role_set == "member"
-        assert view.last_draggable is False
+        assert view.last_draggable is True  # member もドラッグ&ドロップ可
 
     def test_load_sets_manager_draggable(self, tmp_db):
         _setup_board()
@@ -137,11 +137,8 @@ class TestKanbanBoardOnLoad:
             view=view, role="manager", db_folder=tempfile.gettempdir()
         )
         presenter.on_load()
-        # ロック取得成功なら draggable=True、失敗なら member に降格
-        if view.role_set == "manager":
-            assert view.last_draggable is True
-        else:
-            assert view.last_draggable is False
+        # manager・member ともに draggable=True
+        assert view.last_draggable is True
 
     def test_tickets_distributed_to_correct_columns(self, tmp_db):
         members, statuses, ts = _setup_board()

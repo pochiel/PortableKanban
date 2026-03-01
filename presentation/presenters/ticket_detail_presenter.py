@@ -37,8 +37,9 @@ class TicketDetailPresenter:
         self._view.load_statuses(statuses)
         self._view.load_tag_definitions(tag_defs)
 
-        is_manager = self._role == "manager"
-        self._view.set_editable(is_manager)
+        # 新規作成・内容編集は member も可、削除のみ manager 限定
+        can_delete = self._role == "manager"
+        self._view.set_editable(True, can_delete=can_delete)
 
         if self._ticket_id is not None:
             ticket = self._ticket_service.get_by_id(self._ticket_id)

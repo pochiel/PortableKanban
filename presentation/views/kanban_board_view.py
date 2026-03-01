@@ -198,11 +198,8 @@ class KanbanBoardView(QWidget):
     def set_role(self, role: str) -> None:
         """ロールに応じてUI要素を制御する。"""
         is_manager = role == "manager"
-        self._new_ticket_btn.setVisible(is_manager)
+        # 設定画面は manager 専用、それ以外は member も利用可
         self._settings_btn.setVisible(is_manager)
-        self._prompt_btn.setVisible(is_manager)
-        self._import_btn.setVisible(is_manager)
-        self._export_btn.setVisible(is_manager)
 
     def show_manager_warning(self, message: str) -> None:
         """manager編集中警告バナーを表示する。"""

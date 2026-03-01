@@ -250,8 +250,13 @@ class TicketDetailView(QWidget):
             elif isinstance(widget, _OptionalDateEdit):
                 widget.set_iso_str(value)
 
-    def set_editable(self, editable: bool) -> None:
-        """ロールに応じて入力欄を有効/無効にする。"""
+    def set_editable(self, editable: bool, can_delete: bool = False) -> None:
+        """ロールに応じて入力欄を有効/無効にする。
+
+        Args:
+            editable: フォーム編集可否（manager・member ともに True）。
+            can_delete: 削除ボタン表示可否（manager のみ True）。
+        """
         self._title_input.setReadOnly(not editable)
         self._assignee_combo.setEnabled(editable)
         self._status_combo.setEnabled(editable)
@@ -259,9 +264,9 @@ class TicketDetailView(QWidget):
         self._end_date_edit.setEnabled(editable)
         self._note_edit.setReadOnly(not editable)
         self._save_btn.setVisible(editable)
-        # Bug3: 新規チケットでは削除ボタンを表示しない
+        # 削除は manager 専用。新規チケットでは常に非表示
         if not self._is_new:
-            self._delete_btn.setVisible(editable)
+            self._delete_btn.setVisible(can_delete)
         for w in self._tag_widgets.values():
             w.setEnabled(editable)
 
