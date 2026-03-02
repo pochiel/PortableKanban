@@ -9,7 +9,7 @@ import threading
 from datetime import datetime, timezone
 
 from domain.service_result import ServiceResult
-from lock.manager_lock import ManagerLock
+from kanban_lock.manager_lock import ManagerLock
 
 LOCK_TIMEOUT_SEC: int = 30       # ハートビートが止まったとみなす閾値（秒）
 HEARTBEAT_INTERVAL_SEC: int = 10  # ハートビート更新間隔（秒）

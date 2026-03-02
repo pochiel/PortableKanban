@@ -82,7 +82,7 @@ PortableKanban/
     views/                 # PyQt6ウィジェット
     presenters/            # MVP Presenter
     components/            # 共通コンポーネント
-  lock/                    # managerロックファイル
+  kanban_lock/             # managerロックファイル
   tests/                   # pytest テスト
   docs/                    # 設計ドキュメント
 ```

@@ -346,7 +346,7 @@ class TestLockService:
 
     def test_expired_lock_can_be_overwritten(self, tmp_path: Path) -> None:
         """タイムアウト済みのロックは新たにacquireできる。"""
-        from lock.manager_lock import ManagerLock
+        from kanban_lock.manager_lock import ManagerLock
         import json
 
         # 古いタイムスタンプのロックファイルを直接作成する
