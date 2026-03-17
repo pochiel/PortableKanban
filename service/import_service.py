@@ -57,17 +57,21 @@ class ImportService:
                 continue
 
             ticket_id = item.get("ticket_id")
-            if ticket_id is None:
-                errors.append(f"{prefix} ticket_id が必須です。")
-                continue
-            if not isinstance(ticket_id, int):
-                errors.append(f"{prefix} ticket_id は整数である必要があります。")
-                continue
+            is_new = ticket_id is None
 
-            ticket = self._ticket_service.get_by_id(ticket_id)
-            if ticket is None:
-                errors.append(f"{prefix} ticket_id={ticket_id} は存在しません。")
-                continue
+            if not is_new:
+                if not isinstance(ticket_id, int):
+                    errors.append(f"{prefix} ticket_id は整数である必要があります。")
+                    continue
+                if self._ticket_service.get_by_id(ticket_id) is None:
+                    errors.append(f"{prefix} ticket_id={ticket_id} は存在しません。")
+                    continue
+            else:
+                # 新規チケット: title 必須
+                title = item.get("title")
+                if not isinstance(title, str) or not title.strip():
+                    errors.append(f"{prefix} 新規チケット（ticket_id なし）には title が必須です。")
+                    continue
 
             row_errors = self._validate_fields(item, all_status_ids, all_member_ids, prefix)
             if row_errors:
@@ -119,30 +123,46 @@ class ImportService:
 
         diffs: list[TicketDiff] = []
         for item in self._valid_updates:
-            ticket = self._ticket_service.get_by_id(item["ticket_id"])
-            if ticket is None:
-                continue
+            if item.get("ticket_id") is not None:
+                # 既存チケットの更新
+                ticket = self._ticket_service.get_by_id(item["ticket_id"])
+                if ticket is None:
+                    continue
 
-            field_diffs: list[FieldDiff] = []
-
-            if "status_id" in item and item["status_id"] != ticket.status_id:
-                field_diffs.append(
-                    FieldDiff(
-                        "ステータス",
-                        status_map.get(ticket.status_id, str(ticket.status_id)),
-                        status_map.get(item["status_id"], str(item["status_id"])),
+                field_diffs: list[FieldDiff] = []
+                if "status_id" in item and item["status_id"] != ticket.status_id:
+                    field_diffs.append(
+                        FieldDiff(
+                            "ステータス",
+                            status_map.get(ticket.status_id, str(ticket.status_id)),
+                            status_map.get(item["status_id"], str(item["status_id"])),
+                        )
                     )
-                )
-            if "assignee_id" in item and item["assignee_id"] != ticket.assignee_id:
-                before = member_map.get(ticket.assignee_id, "未アサイン") if ticket.assignee_id else "未アサイン"
-                after = member_map.get(item["assignee_id"], "未アサイン") if item["assignee_id"] else "未アサイン"
-                field_diffs.append(FieldDiff("担当者", before, after))
-            if "title" in item and item["title"] != ticket.title:
-                field_diffs.append(FieldDiff("タイトル", ticket.title, item["title"]))
-            if "note" in item and item["note"] != (ticket.note or ""):
-                field_diffs.append(FieldDiff("備考", ticket.note or "", item["note"]))
+                if "assignee_id" in item and item["assignee_id"] != ticket.assignee_id:
+                    before = member_map.get(ticket.assignee_id, "未アサイン") if ticket.assignee_id else "未アサイン"
+                    after = member_map.get(item["assignee_id"], "未アサイン") if item["assignee_id"] else "未アサイン"
+                    field_diffs.append(FieldDiff("担当者", before, after))
+                if "title" in item and item["title"] != ticket.title:
+                    field_diffs.append(FieldDiff("タイトル", ticket.title, item["title"]))
+                if "note" in item and item["note"] != (ticket.note or ""):
+                    field_diffs.append(FieldDiff("備考", ticket.note or "", item["note"]))
 
-            diffs.append(TicketDiff(ticket.id, ticket.title, field_diffs))
+                diffs.append(TicketDiff(ticket.id, ticket.title, field_diffs))
+            else:
+                # 新規チケットの作成
+                title = item["title"]
+                field_diffs = []
+                if "status_id" in item:
+                    field_diffs.append(
+                        FieldDiff("ステータス", "（新規）", status_map.get(item["status_id"], str(item["status_id"])))
+                    )
+                if "assignee_id" in item and item["assignee_id"] is not None:
+                    field_diffs.append(
+                        FieldDiff("担当者", "（新規）", member_map.get(item["assignee_id"], str(item["assignee_id"])))
+                    )
+                if "note" in item and item["note"]:
+                    field_diffs.append(FieldDiff("備考", "（新規）", item["note"]))
+                diffs.append(TicketDiff(None, title, field_diffs, is_new=True))
 
         return diffs
 
@@ -155,37 +175,53 @@ class ImportService:
         if not self._valid_updates:
             return ServiceResult.err("取り込み対象がありません。")
 
+        default_status_id = min(s.id for s in self._status_service.get_all())
         applied: list[int] = []
         try:
             for item in self._valid_updates:
-                ticket = self._ticket_service.get_by_id(item["ticket_id"])
-                if ticket is None:
-                    raise ValueError(f"ticket_id={item['ticket_id']} が見つかりません。")
-
-                # 更新フィールドをマージ
                 tag_values = {
                     int(k): v
                     for k, v in item.get("tag_values", {}).items()
                 }
-                current_tags = self._ticket_service.get_tag_values(ticket.id)
-                current_tag_map = {tv.tag_def_id: tv.value for tv in current_tags}
-                current_tag_map.update(tag_values)
+                if item.get("ticket_id") is not None:
+                    # 既存チケットの更新
+                    ticket = self._ticket_service.get_by_id(item["ticket_id"])
+                    if ticket is None:
+                        raise ValueError(f"ticket_id={item['ticket_id']} が見つかりません。")
 
-                result = self._ticket_service.update(
-                    ticket_id=ticket.id,
-                    title=item.get("title", ticket.title),
-                    status_id=item.get("status_id", ticket.status_id),
-                    assignee_id=item.get("assignee_id", ticket.assignee_id),
-                    start_date=item.get("start_date", ticket.start_date),
-                    end_date=item.get("end_date", ticket.end_date),
-                    note=item.get("note", ticket.note or ""),
-                    tag_values=current_tag_map,
-                )
-                if not result.is_ok:
-                    raise ValueError(
-                        f"ticket_id={ticket.id} の更新に失敗: {result.error_message}"
+                    current_tags = self._ticket_service.get_tag_values(ticket.id)
+                    current_tag_map = {tv.tag_def_id: tv.value for tv in current_tags}
+                    current_tag_map.update(tag_values)
+
+                    result = self._ticket_service.update(
+                        ticket_id=ticket.id,
+                        title=item.get("title", ticket.title),
+                        status_id=item.get("status_id", ticket.status_id),
+                        assignee_id=item.get("assignee_id", ticket.assignee_id),
+                        start_date=item.get("start_date", ticket.start_date),
+                        end_date=item.get("end_date", ticket.end_date),
+                        note=item.get("note", ticket.note or ""),
+                        tag_values=current_tag_map,
                     )
-                applied.append(ticket.id)
+                    if not result.is_ok:
+                        raise ValueError(
+                            f"ticket_id={ticket.id} の更新に失敗: {result.error_message}"
+                        )
+                    applied.append(result.data.id)
+                else:
+                    # 新規チケットの作成
+                    result = self._ticket_service.create(
+                        title=item["title"],
+                        status_id=item.get("status_id", default_status_id),
+                        assignee_id=item.get("assignee_id"),
+                        start_date=item.get("start_date"),
+                        end_date=item.get("end_date"),
+                        note=item.get("note", ""),
+                        tag_values=tag_values or None,
+                    )
+                    if not result.is_ok:
+                        raise ValueError(f"新規チケット「{item['title']}」の作成に失敗: {result.error_message}")
+                    applied.append(result.data.id)
 
         except ValueError as e:
             return ServiceResult.err(

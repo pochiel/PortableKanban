@@ -14,11 +14,15 @@ class FieldDiff:
 
 @dataclass
 class TicketDiff:
-    """取り込みJSONと現在のDBを比較した1チケット分の差分。"""
+    """取り込みJSONと現在のDBを比較した1チケット分の差分。
 
-    ticket_id: int
+    is_new=True の場合は新規チケット作成を表す。ticket_id は None。
+    """
+
+    ticket_id: int | None  # None は新規チケット
     ticket_title: str
     diffs: list[FieldDiff] = field(default_factory=list)
+    is_new: bool = False
 
     def has_changes(self) -> bool:
-        return len(self.diffs) > 0
+        return self.is_new or len(self.diffs) > 0

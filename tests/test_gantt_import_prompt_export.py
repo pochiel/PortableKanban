@@ -342,3 +342,87 @@ class TestImportServiceIntegration:
         assert len(result.data) == 2
         for t in [tickets[0], tickets[1]]:
             assert ts.get_by_id(t.id).status_id == done.id
+
+
+# ==================================================================
+# 8.2.7 ImportService 新規チケット作成テスト
+# ==================================================================
+
+
+class TestImportServiceNewTicket:
+    def _write_json(self, tmp_path, data):
+        path = str(tmp_path / "import.json")
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        return path
+
+    def test_new_ticket_without_title_returns_error(self, tmp_db):
+        _make_tickets(tmp_db)
+        from service.import_service import ImportService
+
+        path = self._write_json(tmp_db, [{"status_id": 1}])
+        svc = ImportService()
+        result = svc.load_and_validate(path)
+        assert not result.is_ok
+        assert "title" in result.error_message
+
+    def test_new_ticket_with_title_is_valid(self, tmp_db):
+        _make_tickets(tmp_db)
+        from service.import_service import ImportService
+
+        path = self._write_json(tmp_db, [{"title": "新規タスク"}])
+        svc = ImportService()
+        result = svc.load_and_validate(path)
+        assert result.is_ok
+
+    def test_new_ticket_shows_in_diff_as_new(self, tmp_db):
+        _make_tickets(tmp_db)
+        from service.import_service import ImportService
+
+        path = self._write_json(tmp_db, [{"title": "新規タスク"}])
+        svc = ImportService()
+        svc.load_and_validate(path)
+        diffs = svc.get_diff()
+
+        assert len(diffs) == 1
+        assert diffs[0].is_new
+        assert diffs[0].ticket_id is None
+        assert diffs[0].ticket_title == "新規タスク"
+
+    def test_new_ticket_execute_creates_ticket(self, tmp_db):
+        members, statuses, ts = _make_tickets(tmp_db)
+        from service.import_service import ImportService
+
+        before_count = len(ts.get_all(FilterCondition()))
+        path = self._write_json(tmp_db, [{"title": "新規タスク", "assignee_id": members[0].id}])
+        svc = ImportService()
+        svc.load_and_validate(path)
+        result = svc.execute()
+
+        assert result.is_ok
+        after = ts.get_all(FilterCondition())
+        assert len(after) == before_count + 1
+        new_ticket = next(t for t in after if t.title == "新規タスク")
+        assert new_ticket.assignee_id == members[0].id
+
+    def test_mixed_update_and_create(self, tmp_db):
+        """既存チケット更新と新規チケット作成を同時に処理できる。"""
+        members, statuses, ts = _make_tickets(tmp_db)
+        from service.import_service import ImportService
+
+        tickets = ts.get_all(FilterCondition())
+        done = next(s for s in statuses if s.name == "完了")
+        updates = [
+            {"ticket_id": tickets[0].id, "status_id": done.id},
+            {"title": "進捗会議で生まれたタスク"},
+        ]
+        path = self._write_json(tmp_db, updates)
+        svc = ImportService()
+        svc.load_and_validate(path)
+        result = svc.execute()
+
+        assert result.is_ok
+        assert len(result.data) == 2
+        assert ts.get_by_id(tickets[0].id).status_id == done.id
+        after = ts.get_all(FilterCondition())
+        assert any(t.title == "進捗会議で生まれたタスク" for t in after)

@@ -431,10 +431,12 @@ FilterWidgetから利用する
 ```
 ファイル: service/import_service.py
 責務: JSONファイルの取り込み・バリデーション・DB反映
+      ticket_id あり → 既存チケットの更新
+      ticket_id なし → 新規チケットの作成（title 必須）
 主要メソッド:
   - load_and_validate(file_path: str) -> ServiceResult
-  - get_diff(updates: list[dict]) -> list[TicketDiff]
-  - execute(updates: list[dict]) -> ServiceResult   # トランザクション制御
+  - get_diff() -> list[TicketDiff]
+  - execute() -> ServiceResult   # トランザクション制御
 ```
 
 #### PromptService

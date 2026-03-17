@@ -198,15 +198,24 @@ class ImportView(QWidget):
         for diff in diffs:
             if not diff.has_changes():
                 continue
-            for fd in diff.diffs:
+            id_text = "【新規】" if diff.is_new else str(diff.ticket_id)
+            if diff.is_new and not diff.diffs:
+                # フィールド差分なし（title のみ）でも1行表示する
                 row = self._diff_table.rowCount()
                 self._diff_table.insertRow(row)
-                self._diff_table.setItem(row, 0, QTableWidgetItem(str(diff.ticket_id)))
+                self._diff_table.setItem(row, 0, QTableWidgetItem(id_text))
                 self._diff_table.setItem(row, 1, QTableWidgetItem(diff.ticket_title))
-                self._diff_table.setItem(row, 2, QTableWidgetItem(fd.field_name))
-                self._diff_table.setItem(
-                    row, 3, QTableWidgetItem(f"{fd.before}  →  {fd.after}")
-                )
+                self._diff_table.setItem(row, 2, QTableWidgetItem("新規作成"))
+                self._diff_table.setItem(row, 3, QTableWidgetItem(""))
+            else:
+                for fd in diff.diffs:
+                    row = self._diff_table.rowCount()
+                    self._diff_table.insertRow(row)
+                    self._diff_table.setItem(row, 0, QTableWidgetItem(id_text))
+                    self._diff_table.setItem(row, 1, QTableWidgetItem(diff.ticket_title))
+                    self._diff_table.setItem(row, 2, QTableWidgetItem(fd.field_name))
+                    change = f"{fd.after}" if diff.is_new else f"{fd.before}  →  {fd.after}"
+                    self._diff_table.setItem(row, 3, QTableWidgetItem(change))
         self._stack.setCurrentIndex(self._STEP_DIFF)
 
     def show_success(self, message: str) -> None:

@@ -64,9 +64,12 @@ python main.py
 [
   {"ticket_id": 1, "status_id": 3},
   {"ticket_id": 2, "assignee_id": 2, "note": "完了見込み3/15"},
-  {"ticket_id": 5, "status_id": 2, "assignee_id": 1}
+  {"ticket_id": 5, "status_id": 2, "assignee_id": 1},
+  {"title": "進捗会議で発生した新タスク", "assignee_id": 2}
 ]
 ```
+
+`ticket_id` を省略すると新規チケットとして採番・作成される。`ticket_id` を省略する場合は `title` が必須。
 
 ## ファイル構成
 

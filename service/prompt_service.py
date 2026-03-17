@@ -78,13 +78,13 @@ class PromptService:
         tag_ids = [t.id for t in tags]
 
         schema = {
-            "description": "変更があるチケットのみ含める配列",
+            "description": "変更・追加があるチケットのみ含める配列",
             "type": "array",
             "items": {
-                "ticket_id": "<整数: 必須>",
+                "ticket_id": "<整数: 任意 / 省略時は新規チケット作成>",
                 "status_id": f"<整数: 任意 / 有効値={status_ids}>",
                 "assignee_id": f"<整数またはnull: 任意 / 有効値={member_ids}>",
-                "title": "<文字列: 任意>",
+                "title": "<文字列: 任意（新規チケットの場合は必須）>",
                 "note": "<文字列: 任意>",
             },
         }
@@ -96,6 +96,7 @@ class PromptService:
         example = [
             {"ticket_id": 1, "status_id": statuses[1].id if len(statuses) > 1 else 2},
             {"ticket_id": 3, "assignee_id": members[0].id if members else 1},
+            {"title": "新しいタスク名", "assignee_id": members[0].id if members else 1},
         ]
 
         return (
