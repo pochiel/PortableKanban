@@ -64,12 +64,23 @@ python main.py
 [
   {"ticket_id": 1, "status_id": 3},
   {"ticket_id": 2, "assignee_id": 2, "note": "完了見込み3/15"},
-  {"ticket_id": 5, "status_id": 2, "assignee_id": 1},
-  {"title": "進捗会議で発生した新タスク", "assignee_id": 2}
+  {"ticket_id": 5, "status_id": 2, "assignee_id": 1, "end_date": "2026-04-01"},
+  {"title": "進捗会議で発生した新タスク", "assignee_id": 2, "start_date": "2026-03-20", "end_date": "2026-03-28"}
 ]
 ```
 
 `ticket_id` を省略すると新規チケットとして採番・作成される。`ticket_id` を省略する場合は `title` が必須。
+
+| フィールド | 型 | 必須 | 説明 |
+|---|---|:---:|---|
+| `ticket_id` | 整数 | — | 省略時は新規作成 |
+| `status_id` | 整数 | — | 有効なステータスID |
+| `assignee_id` | 整数 \| null | — | 有効な担当者ID。null で未アサイン |
+| `title` | 文字列 | 新規のみ必須 | チケットタイトル |
+| `start_date` | 文字列 | — | 開始日（YYYY-MM-DD 形式） |
+| `end_date` | 文字列 | — | 終了予定日（YYYY-MM-DD 形式） |
+| `note` | 文字列 | — | 備考 |
+| `tag_values` | オブジェクト | — | `{"<tag_def_id>": "<値>"}` |
 
 ## テキストエクスポート（Jinja2テンプレート）
 

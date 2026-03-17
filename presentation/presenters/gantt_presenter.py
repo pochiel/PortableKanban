@@ -54,6 +54,7 @@ class GanttPresenter:
         if result.is_ok:
             self._output_path = output_path
             self._view.set_output_ready(output_path)
+            self.on_open_browser()
         else:
             self._view.show_error(result.error_message)
 

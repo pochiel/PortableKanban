@@ -1,6 +1,7 @@
 """service/import_service.py - JSONファイルの取り込み・バリデーション・DB反映。"""
 
 import json
+from datetime import datetime
 
 from domain.filter_condition import FilterCondition
 from domain.service_result import ServiceResult
@@ -110,6 +111,13 @@ class ImportService:
             errors.append(f"{prefix} title は文字列である必要があります。")
         if "note" in item and not isinstance(item["note"], str):
             errors.append(f"{prefix} note は文字列である必要があります。")
+        for field_name in ("start_date", "end_date"):
+            if field_name in item:
+                val = item[field_name]
+                if val is not None and not _is_iso_date(val):
+                    errors.append(
+                        f"{prefix} {field_name} の形式が不正です（YYYY-MM-DD 形式で指定してください）。"
+                    )
         return errors
 
     # ------------------------------------------------------------------
@@ -146,6 +154,10 @@ class ImportService:
                     field_diffs.append(FieldDiff("タイトル", ticket.title, item["title"]))
                 if "note" in item and item["note"] != (ticket.note or ""):
                     field_diffs.append(FieldDiff("備考", ticket.note or "", item["note"]))
+                if "start_date" in item and item["start_date"] != ticket.start_date:
+                    field_diffs.append(FieldDiff("開始日", ticket.start_date or "", item["start_date"] or ""))
+                if "end_date" in item and item["end_date"] != ticket.end_date:
+                    field_diffs.append(FieldDiff("終了予定日", ticket.end_date or "", item["end_date"] or ""))
 
                 diffs.append(TicketDiff(ticket.id, ticket.title, field_diffs))
             else:
@@ -162,6 +174,10 @@ class ImportService:
                     )
                 if "note" in item and item["note"]:
                     field_diffs.append(FieldDiff("備考", "（新規）", item["note"]))
+                if "start_date" in item and item["start_date"]:
+                    field_diffs.append(FieldDiff("開始日", "（新規）", item["start_date"]))
+                if "end_date" in item and item["end_date"]:
+                    field_diffs.append(FieldDiff("終了予定日", "（新規）", item["end_date"]))
                 diffs.append(TicketDiff(None, title, field_diffs, is_new=True))
 
         return diffs
@@ -229,3 +245,14 @@ class ImportService:
             )
 
         return ServiceResult.ok(applied)
+
+
+def _is_iso_date(value) -> bool:
+    """YYYY-MM-DD 形式かどうかを検証する。"""
+    if not isinstance(value, str):
+        return False
+    try:
+        datetime.strptime(value, "%Y-%m-%d")
+        return True
+    except ValueError:
+        return False

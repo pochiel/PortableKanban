@@ -85,6 +85,8 @@ class PromptService:
                 "status_id": f"<整数: 任意 / 有効値={status_ids}>",
                 "assignee_id": f"<整数またはnull: 任意 / 有効値={member_ids}>",
                 "title": "<文字列: 任意（新規チケットの場合は必須）>",
+                "start_date": "<文字列: 任意 / YYYY-MM-DD 形式>",
+                "end_date": "<文字列: 任意 / YYYY-MM-DD 形式>",
                 "note": "<文字列: 任意>",
             },
         }
