@@ -141,6 +141,7 @@ class AppController:
             or not self._kanban_settings_window.isVisible()
         ):
             self._kanban_settings_window = KanbanSettingsView()
+            self._hook_refresh_on_close(self._kanban_settings_window)
         self._kanban_settings_window.show()
         self._kanban_settings_window.raise_()
 
@@ -168,6 +169,7 @@ class AppController:
 
         # 取り込みは毎回フレッシュに開く
         self._import_window = ImportView()
+        self._hook_refresh_on_close(self._import_window)
         self._import_window.show()
         self._import_window.raise_()
 
@@ -183,6 +185,37 @@ class AppController:
     # ------------------------------------------------------------------
     # 内部ヘルパー
     # ------------------------------------------------------------------
+
+    def show_ticket_detail_replace(self, ticket_id: int) -> None:
+        """現在のチケット詳細を別のチケット詳細に置き換える（コピー後の遷移用）。"""
+        from presentation.views.ticket_detail_view import TicketDetailView
+
+        current = self._stack.currentWidget()
+        if current is not self._kanban_view:
+            self._stack.removeWidget(current)
+            current.deleteLater()
+
+        view = TicketDetailView(ticket_id=ticket_id, role=self._role, navigator=self)
+        self._stack.addWidget(view)
+        self._stack.setCurrentWidget(view)
+        self._window.setWindowTitle("PortableKanban - チケット詳細")
+
+    def _hook_refresh_on_close(self, window) -> None:
+        """別ウィンドウが閉じられたときにカンバンボードを自動更新するフックを設定する。"""
+        from PyQt6.QtCore import QEvent, QObject, QTimer
+
+        controller = self
+
+        class _CloseHook(QObject):
+            def eventFilter(self, obj, event):
+                if event.type() == QEvent.Type.Close:
+                    if controller._kanban_view is not None:
+                        QTimer.singleShot(0, controller._kanban_view.refresh)
+                return False
+
+        hook = _CloseHook(window)
+        window.installEventFilter(hook)
+        window._close_hook = hook  # Python参照を保持してGC防止
 
     def _switch_to(self, widget: object) -> None:
         """QStackedWidget の全ページをクリアして新しいウィジェットに差し替える。"""

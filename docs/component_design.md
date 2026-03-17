@@ -81,8 +81,9 @@ Presenterから呼ばれるメソッド:
 対応Presenter: KanbanBoardPresenter
 主要シグナル受付:
   - カードクリック
-  - カードドラッグ&ドロップ（manager限定）
-  - 新規チケットボタン押下（manager限定）
+  - カードドラッグ&ドロップ（全ロール）
+  - 新規チケットボタン押下
+  - ↻ 更新ボタン押下
   - フィルター条件変更
   - メニュー各項目選択
 Presenterから呼ばれるメソッド:
@@ -91,6 +92,8 @@ Presenterから呼ばれるメソッド:
   - hide_manager_warning()
   - set_role(role: str)                        # ロールに応じてUI制御する
   - open_ticket_detail(ticket_id: int)
+  - get_current_filter() -> FilterCondition    # 現在のフィルター条件を返す
+  - restore_filter(condition: FilterCondition) # フィルター条件を復元する（reload後に呼ぶ）
 ```
 
 #### TicketDetailView（SCR-005 チケット詳細・編集画面）
@@ -100,16 +103,18 @@ Presenterから呼ばれるメソッド:
 対応Presenter: TicketDetailPresenter
 主要シグナル受付:
   - 保存ボタン押下
-  - 削除ボタン押下
+  - 削除ボタン押下（manager限定）
+  - コピーして新規作成ボタン押下（全ロール・既存チケットのみ）
   - 戻るボタン押下
 Presenterから呼ばれるメソッド:
   - load_ticket(ticket: Ticket, tags: list[TagValue])
   - load_members(members: list[Member])
   - load_statuses(statuses: list[Status])
   - load_tag_definitions(tags: list[TagDefinition])
-  - set_editable(editable: bool)   # ロールに応じて入力欄を制御する
+  - set_editable(editable: bool, can_delete: bool)  # ロールに応じて入力欄・ボタンを制御する
   - show_error(message: str)
   - go_to_kanban_board()
+  - go_to_ticket_detail(ticket_id: int)  # コピー後に複製チケット詳細へ遷移
 ```
 
 #### GanttView（SCR-006 ガントチャート出力画面）
@@ -220,6 +225,7 @@ Presenterから呼ばれるメソッド:
 主要メソッド:
   - on_load(role: str)
   - on_filter_changed(filter: FilterCondition)
+  - reload_and_render()   # マスタ再取得 + フィルター保持のまま再描画（更新ボタン・別ウィンドウclose時に呼ぶ）
   - on_card_dropped(ticket_id: int, new_status_id: int)
   - on_card_clicked(ticket_id: int)
   - on_new_ticket()
@@ -233,6 +239,7 @@ Presenterから呼ばれるメソッド:
   - on_load(ticket_id: int | None, role: str)  # Noneなら新規作成
   - on_save(ticket_data: dict, tag_values: dict)
   - on_delete(ticket_id: int)
+  - on_clone()  # 同内容でタイトルに「 のコピー」を付けて新規作成し複製チケット詳細へ遷移
 ```
 
 #### GanttPresenter
@@ -292,9 +299,10 @@ Presenterから呼ばれるメソッド:
   - set_statuses(statuses: list[Status])
   - set_tag_definitions(tags: list[TagDefinition])
   - set_default_hidden_statuses(status_ids: list[int])
-  - get_condition() -> FilterCondition   # 現在の条件を返す
+  - get_condition() -> FilterCondition            # 現在の条件を返す
+  - restore_condition(condition: FilterCondition) # チェックボックス状態を復元する（reload後に呼ぶ）
   シグナル:
-  - condition_changed                    # 条件変更時に発火
+  - condition_changed                             # 条件変更時に発火
 ```
 
 #### KanbanCardWidget

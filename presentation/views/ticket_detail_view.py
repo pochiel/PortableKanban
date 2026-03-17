@@ -105,6 +105,8 @@ class TicketDetailView(QWidget):
         btn_layout = QHBoxLayout()
         self._back_btn = QPushButton("戻る")
         self._back_btn.clicked.connect(self._presenter.on_cancel)
+        self._clone_btn = QPushButton("コピーして新規作成")
+        self._clone_btn.clicked.connect(self._presenter.on_clone)
         self._delete_btn = QPushButton("削除")
         self._delete_btn.setStyleSheet("color: red;")
         self._delete_btn.clicked.connect(self._on_delete_clicked)
@@ -114,9 +116,11 @@ class TicketDetailView(QWidget):
 
         btn_layout.addWidget(self._back_btn)
         btn_layout.addStretch()
-        # Bug3: 常にレイアウトに追加し、新規時は非表示にする（floating window 防止）
+        # 常にレイアウトに追加し、新規時は非表示にする（floating window 防止）
+        btn_layout.addWidget(self._clone_btn)
         btn_layout.addWidget(self._delete_btn)
         if self._is_new:
+            self._clone_btn.setVisible(False)
             self._delete_btn.setVisible(False)
         btn_layout.addWidget(self._save_btn)
 
@@ -264,9 +268,10 @@ class TicketDetailView(QWidget):
         self._end_date_edit.setEnabled(editable)
         self._note_edit.setReadOnly(not editable)
         self._save_btn.setVisible(editable)
-        # 削除は manager 専用。新規チケットでは常に非表示
+        # 削除・コピーは新規チケットでは常に非表示
         if not self._is_new:
             self._delete_btn.setVisible(can_delete)
+            self._clone_btn.setVisible(True)  # コピーは全ロール可
         for w in self._tag_widgets.values():
             w.setEnabled(editable)
 
@@ -291,6 +296,11 @@ class TicketDetailView(QWidget):
     def go_to_kanban_board(self) -> None:
         if self._navigator:
             self._navigator.show_kanban_board_back()
+
+    def go_to_ticket_detail(self, ticket_id: int) -> None:
+        """コピー後に複製チケットの詳細画面へ遷移する。"""
+        if self._navigator:
+            self._navigator.show_ticket_detail_replace(ticket_id)
 
 
 class _SmartDateEdit(QDateEdit):
@@ -326,8 +336,7 @@ class _OptionalDateEdit(QWidget):
         self._edit.setMinimumDate(QDate(2000, 1, 1))
         self._edit.setDate(self._edit.minimumDate())
 
-        clear_btn = QPushButton("×")
-        clear_btn.setFixedWidth(22)
+        clear_btn = QPushButton("日付未定")
         clear_btn.clicked.connect(self._clear)
 
         layout.addWidget(self._edit)

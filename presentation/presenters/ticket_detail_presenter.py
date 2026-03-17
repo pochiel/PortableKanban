@@ -108,6 +108,32 @@ class TicketDetailPresenter:
         else:
             self._view.show_error(result.error_message)
 
+    def on_clone(self) -> None:
+        """コピーして新規作成ボタン押下時の処理。"""
+        if self._ticket_id is None:
+            return
+        ticket = self._ticket_service.get_by_id(self._ticket_id)
+        if ticket is None:
+            self._view.show_error("チケットが見つかりません。")
+            return
+
+        tag_values_list = self._ticket_service.get_tag_values(self._ticket_id)
+        tag_values = {tv.tag_def_id: tv.value for tv in tag_values_list}
+
+        result = self._ticket_service.create(
+            title=f"{ticket.title} のコピー",
+            status_id=ticket.status_id,
+            assignee_id=ticket.assignee_id,
+            start_date=ticket.start_date,
+            end_date=ticket.end_date,
+            note=ticket.note or "",
+            tag_values=tag_values,
+        )
+        if result.is_ok:
+            self._view.go_to_ticket_detail(result.data.id)
+        else:
+            self._view.show_error(f"コピーの作成に失敗しました: {result.error_message}")
+
     def on_cancel(self) -> None:
         """戻るボタン押下時の処理。"""
         self._view.go_to_kanban_board()

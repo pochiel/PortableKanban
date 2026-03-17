@@ -86,20 +86,23 @@ class KanbanBoardPresenter:
         self._render(filter)
 
     def reload_and_render(self) -> None:
-        """Bug6: マスタデータ（担当者・ステータス）を再読み込みしてボードを再描画する。
+        """マスタデータ（担当者・ステータス）を再読み込みしてボードを再描画する。
 
         チケット詳細や設定画面から戻った時に呼ぶ。
         設定でステータスが追加された場合も正しく反映される。
+        フィルター状態はリセットせず、ユーザーの設定を保持する。
         """
         from service.member_service import MemberService
         from service.tag_service import TagService
+
+        # フィルター状態を保存（init_filter でリセットされる前に）
+        saved_filter = self._view.get_current_filter()
 
         self._members = MemberService().get_all_active()
         self._statuses = self._status_service.get_all()
         self._prefix = self._ticket_service.get_prefix()
 
         hidden_ids = self._status_service.get_default_hidden_ids()
-        visible_status_ids = [s.id for s in self._statuses if s.id not in hidden_ids]
 
         self._view.init_filter(
             members=self._members,
@@ -107,7 +110,10 @@ class KanbanBoardPresenter:
             tag_defs=TagService().get_all(),
             default_hidden_status_ids=hidden_ids,
         )
-        self._render(FilterCondition(status_ids=visible_status_ids))
+
+        # フィルター状態を復元
+        self._view.restore_filter(saved_filter)
+        self._render(saved_filter)
 
     # ------------------------------------------------------------------
     # カード操作

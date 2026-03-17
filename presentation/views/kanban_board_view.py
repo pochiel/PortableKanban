@@ -91,8 +91,12 @@ class KanbanBoardView(QWidget):
         self._gantt_btn = QPushButton("ガントチャート")
         self._gantt_btn.clicked.connect(self._on_gantt_clicked)
 
+        refresh_btn = QPushButton("↻ 更新")
+        refresh_btn.clicked.connect(self.refresh)
+
         toolbar.addWidget(self._new_ticket_btn)
         toolbar.addStretch()
+        toolbar.addWidget(refresh_btn)
         toolbar.addWidget(self._gantt_btn)
         toolbar.addWidget(self._prompt_btn)
         toolbar.addWidget(self._import_btn)
@@ -216,6 +220,10 @@ class KanbanBoardView(QWidget):
     def get_current_filter(self) -> FilterCondition:
         """現在のフィルター条件を返す（Presenter からの呼び出し用）。"""
         return self._filter_widget.get_condition()
+
+    def restore_filter(self, condition: FilterCondition) -> None:
+        """フィルター条件を復元する（reload_and_render 後に呼ぶ）。"""
+        self._filter_widget.restore_condition(condition)
 
     def open_ticket_detail(self, ticket_id: int | None) -> None:
         """チケット詳細画面を開く（navigator 経由）。"""

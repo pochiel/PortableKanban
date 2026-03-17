@@ -157,6 +157,19 @@ class FilterWidget(QWidget):
             if sid in status_ids:
                 cb.setChecked(False)
 
+    def restore_condition(self, condition: FilterCondition) -> None:
+        """フィルター条件を復元する（画面更新後にフィルター状態を維持するために使う）。"""
+        if condition.assignee_ids is not None:
+            for cb, mid in self._member_checks:
+                cb.blockSignals(True)
+                cb.setChecked(mid in condition.assignee_ids)
+                cb.blockSignals(False)
+        if condition.status_ids is not None:
+            for cb, sid in self._status_checks:
+                cb.blockSignals(True)
+                cb.setChecked(sid in condition.status_ids)
+                cb.blockSignals(False)
+
     # ------------------------------------------------------------------
     # フィルター条件の取得
     # ------------------------------------------------------------------
