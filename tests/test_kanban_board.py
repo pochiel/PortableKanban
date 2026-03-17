@@ -40,7 +40,7 @@ def _setup_board():
 
     ss = StatusService()
     ss.create("未着手")
-    ss.create("仕掛り中")
+    ss.create("仕掛")
     ss.create("完了")
     statuses = ss.get_all()
 
@@ -148,10 +148,10 @@ class TestKanbanBoardOnLoad:
         presenter = KanbanBoardPresenter(view=view, role="member", db_folder=tempfile.gettempdir())
         presenter.on_load()
 
-        # 未着手に2枚、仕掛り中に1枚
+        # 未着手に2枚、仕掛に1枚
         col_map = {c.status.name: c.tickets for c in view.rendered_columns}
         assert len(col_map["未着手"]) == 2
-        assert len(col_map["仕掛り中"]) == 1
+        assert len(col_map["仕掛"]) == 1
         assert len(col_map["完了"]) == 0
 
 
@@ -186,7 +186,7 @@ class TestKanbanBoardFilter:
         presenter = KanbanBoardPresenter(view=view, role="member", db_folder=tempfile.gettempdir())
         presenter.on_load()
 
-        # 田中さんのみに絞り込む（未着手1 + 仕掛り中1 = 2枚）
+        # 田中さんのみに絞り込む（未着手1 + 仕掛1 = 2枚）
         f = FilterCondition(assignee_ids=[members[0].id])
         view._filter = f
         presenter.on_filter_changed(f)

@@ -115,7 +115,7 @@ class SetupService:
             # デフォルトステータスを挿入
             from service.status_service import StatusService
             ss = StatusService()
-            for name in ("未着手", "仕掛り中", "完了", "保留", "CLOSE"):
+            for name in ("未着手", "仕掛", "完了", "保留", "CLOSE"):
                 ss.create(name)
 
             # "CLOSE" をデフォルト非表示に設定

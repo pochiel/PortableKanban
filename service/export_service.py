@@ -1,5 +1,7 @@
 """service/export_service.py - Jinja2テンプレートを使ったテキストエクスポート。"""
 
+from datetime import datetime
+
 from domain.export_template import ExportTemplate
 from domain.filter_condition import FilterCondition
 from domain.member import Member
@@ -13,6 +15,25 @@ from service.member_service import MemberService
 from service.status_service import StatusService
 from service.tag_service import TagService
 from service.ticket_service import TicketService
+
+
+_WEEKDAYS = "月火水木金土日"
+
+
+def _jdate_filter(value: str) -> str:
+    """ISO日付文字列を日本語フォーマットに変換する。
+
+    例: '2026-03-18' → '2026年03月18日(水)'
+    変換できない値はそのまま返す。
+    """
+    if not value:
+        return ""
+    try:
+        dt = datetime.strptime(str(value), "%Y-%m-%d")
+        weekday = _WEEKDAYS[dt.weekday()]
+        return f"{dt.year}年{dt.month:02d}月{dt.day:02d}日({weekday})"
+    except (ValueError, TypeError):
+        return str(value)
 
 
 class ExportService:
@@ -81,9 +102,10 @@ class ExportService:
 
         try:
             env = Environment(loader=BaseLoader())
+            env.filters["jdate"] = _jdate_filter
             tmpl = env.from_string(template.template_body)
             text = tmpl.render(tickets=ticket_dicts)
-        except TemplateError as e:
+        except Exception as e:
             return ServiceResult.err(f"テンプレートのレンダリングに失敗しました: {e}")
 
         return ServiceResult.ok(text)
@@ -107,6 +129,9 @@ class ExportService:
             return ServiceResult.err("テンプレート名を入力してください。")
         if not body.strip():
             return ServiceResult.err("テンプレート本文を入力してください。")
+        syntax_err = self._check_syntax(body)
+        if syntax_err:
+            return ServiceResult.err(syntax_err)
         t = ExportTemplate(name=name.strip(), template_body=body)
         self._template_repo.save(t)
         return ServiceResult.ok()
@@ -117,6 +142,9 @@ class ExportService:
             return ServiceResult.err("テンプレート名を入力してください。")
         if not body.strip():
             return ServiceResult.err("テンプレート本文を入力してください。")
+        syntax_err = self._check_syntax(body)
+        if syntax_err:
+            return ServiceResult.err(syntax_err)
         t = self._template_repo.find_by_id(template_id)
         if t is None:
             return ServiceResult.err(f"テンプレートID={template_id} が見つかりません。")
@@ -124,6 +152,15 @@ class ExportService:
         t.template_body = body
         self._template_repo.save(t)
         return ServiceResult.ok()
+
+    def _check_syntax(self, body: str) -> str | None:
+        """Jinja2 テンプレートの構文チェック。エラーがあればメッセージを返す。"""
+        try:
+            from jinja2 import Environment, BaseLoader
+            Environment(loader=BaseLoader()).parse(body)
+            return None
+        except Exception as e:
+            return f"テンプレートの構文エラー: {e}"
 
     def delete_template(self, template_id: int) -> ServiceResult:
         """テンプレートを削除する。"""

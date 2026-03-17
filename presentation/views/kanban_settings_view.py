@@ -211,7 +211,8 @@ class KanbanSettingsView(QWidget):
         help_label = QLabel(
             "テンプレートで使用できる変数: "
             "{{ t.number }}, {{ t.title }}, {{ t.status }}, {{ t.assignee }}, "
-            "{{ t.start_date }}, {{ t.end_date }}, {{ t.note }}, {{ t.tags['タグ名'] }}"
+            "{{ t.start_date }}, {{ t.end_date }}, {{ t.note }}, {{ t.tags['タグ名'] }}  "
+            "| 日付フィルター: {{ t.end_date | jdate }}  →  2026年03月18日(水)"
         )
         help_label.setWordWrap(True)
         help_label.setStyleSheet("color: gray; font-size: 11px;")
@@ -627,13 +628,14 @@ class _TemplateDialog(QDialog):
             "Jinja2 テンプレートを入力してください。\n"
             "例:\n"
             "{% for t in tickets %}\n"
-            "- [{{ t.number }}] {{ t.title }} / {{ t.status }}\n"
+            "- [{{ t.number }}] {{ t.title }} / {{ t.status }} / 期限: {{ t.end_date | jdate }}\n"
             "{% endfor %}"
         )
 
         help_label = QLabel(
             "利用可能変数: t.number, t.title, t.status, t.assignee, "
-            "t.start_date, t.end_date, t.note, t.tags['タグ名']"
+            "t.start_date, t.end_date, t.note, t.tags['タグ名']\n"
+            "日付フィルター: {{ t.end_date | jdate }}  →  2026年03月18日(水)"
         )
         help_label.setStyleSheet("color: gray; font-size: 11px;")
         help_label.setWordWrap(True)
