@@ -18,6 +18,7 @@ if not exist ".venv" (
     call .venv\Scripts\activate.bat
     echo Checking pip version...
     python -m pip install --upgrade pip --quiet
+    pip install -r requirements.txt --quiet
 )
 
 python main.py %*
