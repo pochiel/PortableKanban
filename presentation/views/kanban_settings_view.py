@@ -211,8 +211,10 @@ class KanbanSettingsView(QWidget):
         help_label = QLabel(
             "テンプレートで使用できる変数: "
             "{{ t.number }}, {{ t.title }}, {{ t.status }}, {{ t.assignee }}, "
-            "{{ t.start_date }}, {{ t.end_date }}, {{ t.note }}, {{ t.tags['タグ名'] }}  "
-            "| 日付フィルター: {{ t.end_date | jdate }}  →  2026年03月18日(水)"
+            "{{ t.start_date }}, {{ t.end_date }}, {{ t.note }}, {{ t.tags['タグ名'] }}\n"
+            "独自フィルター: "
+            "{{ t.end_date | jdate }}  →  2026年03月18日(水)  / "
+            "tickets | groupby_tag('タグ名')  →  タグでグループ化（日本語タグ名対応）"
         )
         help_label.setWordWrap(True)
         help_label.setStyleSheet("color: gray; font-size: 11px;")
@@ -635,7 +637,9 @@ class _TemplateDialog(QDialog):
         help_label = QLabel(
             "利用可能変数: t.number, t.title, t.status, t.assignee, "
             "t.start_date, t.end_date, t.note, t.tags['タグ名']\n"
-            "日付フィルター: {{ t.end_date | jdate }}  →  2026年03月18日(水)"
+            "独自フィルター: "
+            "{{ t.end_date | jdate }}  →  2026年03月18日(水)  / "
+            "tickets | groupby_tag('タグ名')  →  タグでグループ化（日本語タグ名対応）"
         )
         help_label.setStyleSheet("color: gray; font-size: 11px;")
         help_label.setWordWrap(True)

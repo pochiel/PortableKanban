@@ -106,9 +106,13 @@ python main.py
 | フィルター | 説明 | 例 |
 |---|---|---|
 | `\| jdate` | ISO日付を日本語表記に変換 | `{{ t.end_date \| jdate }}` → `2026年03月18日(水)` |
+| `\| groupby_tag('タグ名')` | 指定タグでチケットをグループ化 | `tickets \| groupby_tag('機種名')` |
+
+> **注意:** タグのグループ化には標準の `groupby('tags.タグ名')` ではなく `groupby_tag('タグ名')` を使ってください。日本語キーのdictには標準フィルターが対応していません。
 
 ### テンプレート例
 
+シンプルなリスト:
 ```jinja2
 {% for t in tickets %}
 [{{ t.number }}] {{ t.title }}
@@ -116,6 +120,17 @@ python main.py
   期限: {{ t.end_date | jdate }}
   備考: {{ t.note }}
 {% endfor %}
+```
+
+タグでグループ化:
+```jinja2
+{%- for ksy, group in tickets | groupby_tag('機種名') %}
+----
+◇ {{ ksy }}
+  {%- for t in group %}
+    ■【{{ t.tags['機能名'] }}】 {{ t.title }} [{{ t.status }}]
+  {%- endfor %}
+{%- endfor %}
 ```
 
 ## ファイル構成

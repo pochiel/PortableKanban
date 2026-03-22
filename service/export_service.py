@@ -20,6 +20,22 @@ from service.ticket_service import TicketService
 _WEEKDAYS = "月火水木金土日"
 
 
+def _groupby_tag_filter(tickets, tag_name: str):
+    """タグ名でチケットをグループ化するフィルター。
+
+    標準の groupby('tags.タグ名') は日本語キーのdictで失敗するため代替として使用する。
+    タグが未設定のチケットは空文字列キーにまとめる。
+
+    使用例: tickets | groupby_tag('機種名')
+    """
+    from itertools import groupby
+
+    key_fn = lambda t: (t.get("tags") or {}).get(tag_name, "")
+    sorted_tickets = sorted(tickets, key=key_fn)
+    for key, group in groupby(sorted_tickets, key=key_fn):
+        yield key, list(group)
+
+
 def _jdate_filter(value: str) -> str:
     """ISO日付文字列を日本語フォーマットに変換する。
 
@@ -103,6 +119,7 @@ class ExportService:
         try:
             env = Environment(loader=BaseLoader())
             env.filters["jdate"] = _jdate_filter
+            env.filters["groupby_tag"] = _groupby_tag_filter
             tmpl = env.from_string(template.template_body)
             text = tmpl.render(tickets=ticket_dicts)
         except Exception as e:
