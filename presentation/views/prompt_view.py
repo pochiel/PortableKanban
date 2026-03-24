@@ -30,7 +30,7 @@ class PromptView(QWidget):
     # ------------------------------------------------------------------
 
     def _build_ui(self) -> None:
-        self.setWindowTitle("PortableKanban - プロンプト生成")
+        self.setWindowTitle("PortableKanban - エクスポート")
         self.setMinimumSize(700, 540)
 
         # タブウィジェット
@@ -39,7 +39,7 @@ class PromptView(QWidget):
         self._prompt_edit = QTextEdit()
         self._prompt_edit.setReadOnly(True)
         self._prompt_edit.setFontFamily("MS Gothic, Consolas, monospace")
-        self._tabs.addTab(self._prompt_edit, "プロンプト")
+        self._tabs.addTab(self._prompt_edit, "データベース")
 
         self._format_edit = QTextEdit()
         self._format_edit.setReadOnly(True)

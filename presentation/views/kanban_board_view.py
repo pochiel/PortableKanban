@@ -80,7 +80,7 @@ class KanbanBoardView(QWidget):
         # manager 専用ボタン群
         self._settings_btn = QPushButton("⚙ 設定")
         self._settings_btn.clicked.connect(self._on_settings_clicked)
-        self._prompt_btn = QPushButton("AI プロンプト")
+        self._prompt_btn = QPushButton("エクスポート")
         self._prompt_btn.clicked.connect(self._on_prompt_clicked)
         self._import_btn = QPushButton("進捗取り込み")
         self._import_btn.clicked.connect(self._on_import_clicked)

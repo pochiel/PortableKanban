@@ -164,10 +164,10 @@ Presenterから呼ばれるメソッド:
   - show_error(message: str)        # ロールバック済みの旨を含む
 ```
 
-#### PromptView（SCR-009 プロンプト生成画面）
+#### PromptView（SCR-009 エクスポート画面）
 ```
 ファイル: presentation/views/prompt_view.py
-責務: AIプロンプトとJSONフォーマットの表示UI（別ウィンドウ）
+責務: データベース情報とJSONフォーマットの表示UI（別ウィンドウ）
 対応Presenter: PromptPresenter
 主要シグナル受付:
   - クリップボードコピーボタン押下
@@ -450,7 +450,7 @@ FilterWidgetから利用する
 #### PromptService
 ```
 ファイル: service/prompt_service.py
-責務: ルールデータからAIプロンプトとJSONフォーマットを動的生成
+責務: ルールデータからデータベース情報とJSONフォーマットを動的生成
 主要メソッド:
   - generate_prompt() -> str
   - generate_format() -> str
