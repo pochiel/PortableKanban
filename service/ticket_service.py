@@ -6,6 +6,7 @@ from domain.tag_value import TagValue
 from domain.ticket import Ticket
 from repository.settings_repository import SettingsRepository
 from repository.tag_value_repository import TagValueRepository
+from repository.ticket_change_history_repository import TicketChangeHistoryRepository
 from repository.ticket_repository import TicketRepository
 
 _MAX_TITLE_LENGTH = 200
@@ -23,6 +24,7 @@ class TicketService:
         self._ticket_repo = ticket_repo or TicketRepository()
         self._tag_value_repo = tag_value_repo or TagValueRepository()
         self._settings_repo = settings_repo or SettingsRepository()
+        self._history_repo = TicketChangeHistoryRepository()
 
     # ------------------------------------------------------------------
     # 読み取り
@@ -83,6 +85,16 @@ class TicketService:
         if tag_values:
             self._save_tag_values(saved.id, tag_values)
 
+        # 変更履歴: 新規作成時は old_value=None で記録
+        history: list[tuple] = [("status", None, str(status_id))]
+        if start_date:
+            history.append(("start_date", None, start_date))
+        if end_date:
+            history.append(("end_date", None, end_date))
+        self._history_repo.record_many(
+            [(saved.id, f, o, n) for f, o, n in history]
+        )
+
         return ServiceResult.ok(data=saved)
 
     def update(
@@ -105,6 +117,15 @@ class TicketService:
         if error:
             return ServiceResult.err(error)
 
+        # 変更履歴: 変更があったフィールドのみ記録
+        history: list[tuple] = []
+        if existing.status_id != status_id:
+            history.append((ticket_id, "status", str(existing.status_id), str(status_id)))
+        if existing.start_date != (start_date or None):
+            history.append((ticket_id, "start_date", existing.start_date, start_date or None))
+        if existing.end_date != (end_date or None):
+            history.append((ticket_id, "end_date", existing.end_date, end_date or None))
+
         existing.title = title.strip()
         existing.status_id = status_id
         existing.assignee_id = assignee_id
@@ -115,6 +136,9 @@ class TicketService:
 
         if tag_values is not None:
             self._save_tag_values(ticket_id, tag_values)
+
+        if history:
+            self._history_repo.record_many(history)
 
         return ServiceResult.ok(data=saved)
 
@@ -137,8 +161,10 @@ class TicketService:
         if StatusRepository().find_by_id(new_status_id) is None:
             return ServiceResult.err(f"ステータスID {new_status_id} が存在しません。")
 
+        old_status_id = existing.status_id
         existing.status_id = new_status_id
         self._ticket_repo.save(existing)
+        self._history_repo.record(ticket_id, "status", str(old_status_id), str(new_status_id))
         return ServiceResult.ok()
 
     # ------------------------------------------------------------------

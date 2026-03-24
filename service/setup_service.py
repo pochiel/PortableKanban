@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from db.connection import init_rules_db, init_work_db, set_db_paths
+from db.connection import init_rules_db, init_work_db, migrate_work_db, set_db_paths
 from domain.service_result import ServiceResult
 from repository.settings_repository import SettingsRepository
 from service.auth_service import AuthService
@@ -159,6 +159,7 @@ class SetupService:
             )
 
         set_db_paths(str(rules_db_path), str(work_db_path))
+        migrate_work_db(str(work_db_path))
         return ServiceResult.ok(
             data={"rules_db": str(rules_db_path), "work_db": str(work_db_path)}
         )

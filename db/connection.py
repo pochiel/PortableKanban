@@ -112,6 +112,34 @@ def init_work_db(db_path: str) -> None:
         conn.close()
 
 
+def migrate_work_db(db_path: str) -> None:
+    """既存の work.db に対してマイグレーションを適用する。
+
+    アプリ起動時（open_db）に毎回呼ぶ。IF NOT EXISTS を使用しているため冪等。
+    新バージョンでテーブル追加が必要になった場合はここに追記する。
+    """
+    conn = _create_connection(db_path)
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS ticket_change_history (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticket_id   INTEGER NOT NULL,
+                field_name  TEXT    NOT NULL,
+                old_value   TEXT,
+                new_value   TEXT,
+                changed_at  TEXT    NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_ticket_change_history_ticket_id
+                ON ticket_change_history (ticket_id);
+            CREATE INDEX IF NOT EXISTS idx_ticket_change_history_field_name
+                ON ticket_change_history (field_name);
+            """
+        )
+    finally:
+        conn.close()
+
+
 def execute_with_retry(
     conn: sqlite3.Connection,
     sql: str,

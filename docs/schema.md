@@ -166,6 +166,26 @@
 
 ---
 
+### ticket_change_history（チケット変更履歴テーブル）
+
+チケットの `status` / `start_date` / `end_date` の変更を時系列で記録する。分析用途（リードタイム計算等）に使用。UIへの露出はなく、アプリが裏で自動記録する。
+
+| カラム名 | 型 | 制約 | 説明 |
+|---|---|---|---|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT | |
+| ticket_id | INTEGER | NOT NULL | チケットID（ticketsテーブル参照） |
+| field_name | TEXT | NOT NULL | 変更対象フィールド（`status` / `start_date` / `end_date`） |
+| old_value | TEXT | | 変更前の値（NULL = 新規作成時 or 未設定からの変更） |
+| new_value | TEXT | | 変更後の値（NULL = 日付クリア） |
+| changed_at | TEXT | NOT NULL | 変更日時（ISO8601） |
+
+**備考:**
+- `status` の値はステータスID（整数）をTEXTで保存する。表示名への変換はアプリ層が担当
+- 機能追加前に作成されたチケットの履歴は存在しない。リードタイム計算不可の場合は「計算不可」として扱う
+- `created_at` / `updated_at` は持たない（変更が発生しないため）
+
+---
+
 ## テーブル間の関係図
 
 ```
@@ -179,9 +199,10 @@ rules.db
 work.db                     │
   tickets ──────────────────┘
     │ id
-    └── tag_values.ticket_id
-          │ tag_def_id
-          └──→ tag_definitions.id（rules.db）
+    ├── tag_values.ticket_id
+    │       │ tag_def_id
+    │       └──→ tag_definitions.id（rules.db）
+    └── ticket_change_history.ticket_id
 ```
 
 **注意:** SQLiteは異なるファイル間の外部キー制約をネイティブにサポートしない。`rules.db` と `work.db` をまたぐ参照整合性はアプリ層のバリデーションで担保する。
@@ -219,6 +240,8 @@ work.db                     │
 | tickets | is_deleted | 削除済みチケットの除外で使用 |
 | tag_values | ticket_id | チケットに紐づくタグ取得で使用 |
 | tag_values | tag_def_id, value | タグ検索で使用 |
+| ticket_change_history | ticket_id | 1チケットの変更履歴一覧取得で使用 |
+| ticket_change_history | field_name | フィールド別集計（CLOSEDになった日時の抽出等）で使用 |
 
 ---
 

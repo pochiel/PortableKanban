@@ -41,3 +41,18 @@ CREATE TABLE IF NOT EXISTS tag_values (
 -- タグ検索で頻繁に使用するカラムにインデックスを設定する
 CREATE INDEX IF NOT EXISTS idx_tag_values_ticket_id        ON tag_values (ticket_id);
 CREATE INDEX IF NOT EXISTS idx_tag_values_tag_def_id_value ON tag_values (tag_def_id, value);
+
+-- チケット変更履歴テーブル
+-- status / start_date / end_date の変更を時系列で記録する（分析用）
+-- old_value=NULL は新規作成 or 未設定からの変更を表す
+CREATE TABLE IF NOT EXISTS ticket_change_history (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id   INTEGER NOT NULL,
+    field_name  TEXT    NOT NULL,  -- 'status' / 'start_date' / 'end_date'
+    old_value   TEXT,              -- 変更前の値（NULL = 新規作成時 or 未設定）
+    new_value   TEXT,              -- 変更後の値（NULL = 日付クリア）
+    changed_at  TEXT    NOT NULL   -- ISO8601
+);
+
+CREATE INDEX IF NOT EXISTS idx_ticket_change_history_ticket_id   ON ticket_change_history (ticket_id);
+CREATE INDEX IF NOT EXISTS idx_ticket_change_history_field_name  ON ticket_change_history (field_name);

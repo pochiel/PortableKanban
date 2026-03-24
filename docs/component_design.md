@@ -523,6 +523,15 @@ FilterWidgetから利用する
   - save_all(ticket_id: int, tag_values: list[TagValue]) -> None  # 既存を削除して全件insert
 ```
 
+#### TicketChangeHistoryRepository
+```
+ファイル: repository/ticket_change_history_repository.py
+責務: ticket_change_history テーブルへのINSERT専用（読み取りは外部分析ツール想定）
+主要メソッド:
+  - record(ticket_id, field_name, old_value, new_value) -> None
+  - record_many(records: list[tuple]) -> None  # (ticket_id, field_name, old, new) のリスト
+```
+
 #### SettingsRepository
 ```
 ファイル: repository/settings_repository.py
