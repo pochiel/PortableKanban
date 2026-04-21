@@ -47,6 +47,7 @@ class AppController:
         self._prompt_window = None
         self._import_window = None
         self._export_window = None
+        self._last_export_filter = None
 
         # ウィンドウ閉じるイベントでカンバンボードのクリーンアップを実行
         self._window.closeEvent = self._on_window_close
@@ -178,7 +179,21 @@ class AppController:
         from presentation.views.export_view import ExportView
 
         if self._export_window is None or not self._export_window.isVisible():
-            self._export_window = ExportView()
+            self._export_window = ExportView(initial_filter=self._last_export_filter)
+            self._hook_refresh_on_close(self._export_window)
+
+            from PyQt6.QtCore import QEvent, QObject
+            controller = self
+
+            class _SaveFilterHook(QObject):
+                def eventFilter(self, obj, event):
+                    if event.type() == QEvent.Type.Close:
+                        controller._last_export_filter = obj.get_current_filter()
+                    return False
+
+            hook = _SaveFilterHook(self._export_window)
+            self._export_window.installEventFilter(hook)
+            self._export_window._save_filter_hook = hook
         self._export_window.show()
         self._export_window.raise_()
 

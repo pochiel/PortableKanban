@@ -20,7 +20,7 @@ class ExportPresenter:
         self._current_filter = FilterCondition()
         self._current_text: str = ""
 
-    def on_load(self) -> None:
+    def on_load(self, initial_filter=None) -> None:
         """画面表示時の初期化。"""
         templates = self._export_service.get_all_templates()
         members = self._member_service.get_all_active()
@@ -29,6 +29,10 @@ class ExportPresenter:
 
         self._view.load_templates(templates)
         self._view.init_filter(members, statuses, tag_defs)
+
+        if initial_filter is not None:
+            self._current_filter = initial_filter
+            self._view.restore_filter(initial_filter)
 
         if templates:
             self._current_template_id = templates[0].id

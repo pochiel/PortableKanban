@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 
 from domain.export_template import ExportTemplate
+from domain.filter_condition import FilterCondition
 from domain.member import Member
 from domain.status import Status
 from domain.tag_definition import TagDefinition
@@ -27,11 +28,11 @@ class ExportView(QWidget):
     テンプレート選択 + フィルターでチケットを絞り込んで Jinja2 でテキスト生成する。
     """
 
-    def __init__(self) -> None:
+    def __init__(self, initial_filter: FilterCondition | None = None) -> None:
         super().__init__()
         self._presenter = ExportPresenter(view=self)
         self._build_ui()
-        self._presenter.on_load()
+        self._presenter.on_load(initial_filter=initial_filter)
 
     # ------------------------------------------------------------------
     # UI 構築
@@ -125,6 +126,12 @@ class ExportView(QWidget):
         self._template_combo.blockSignals(False)
         if templates:
             self._template_combo.setCurrentIndex(0)
+
+    def get_current_filter(self) -> FilterCondition:
+        return self._filter_widget.get_condition()
+
+    def restore_filter(self, condition: FilterCondition) -> None:
+        self._filter_widget.restore_condition(condition)
 
     def init_filter(
         self,
