@@ -1,12 +1,17 @@
 """presentation/presenters/kanban_board_presenter.py - SCR-004 カンバンボードの Presenter。"""
 
-from domain.filter_condition import FilterCondition
+import json
+
+from domain.filter_condition import FilterCondition, TagFilter
 from domain.member import Member
 from domain.status import Status
 from domain.ticket import Ticket
+from repository.settings_repository import SettingsRepository
 from service.lock_service import LockService
 from service.status_service import StatusService
 from service.ticket_service import TicketService
+
+_SETTINGS_KEY_KANBAN_FILTER = "kanban_filter"
 
 
 class StatusColumn:
@@ -26,6 +31,7 @@ class KanbanBoardPresenter:
         self._ticket_service = TicketService()
         self._status_service = StatusService()
         self._lock_service = LockService(db_folder)
+        self._settings_repo = SettingsRepository()
         self._members: list[Member] = []
         self._statuses: list[Status] = []
         self._prefix: str = ""
@@ -68,9 +74,14 @@ class KanbanBoardPresenter:
             default_hidden_status_ids=hidden_ids,
         )
 
-        # 初期描画
-        initial_filter = FilterCondition(status_ids=visible_status_ids)
-        self._render(initial_filter)
+        # 保存済みフィルターがあれば復元、なければデフォルト（非表示ステータスを除外）
+        saved_filter = self._load_filter()
+        if saved_filter is not None:
+            self._view.restore_filter(saved_filter)
+            self._render(saved_filter)
+        else:
+            initial_filter = FilterCondition(status_ids=visible_status_ids)
+            self._render(initial_filter)
 
     def on_close(self) -> None:
         """アプリ終了時のクリーンアップ。"""
@@ -83,6 +94,7 @@ class KanbanBoardPresenter:
 
     def on_filter_changed(self, filter: FilterCondition) -> None:
         """フィルター条件変更時の再描画。"""
+        self._save_filter(filter)
         self._render(filter)
 
     def reload_and_render(self) -> None:
@@ -134,6 +146,53 @@ class KanbanBoardPresenter:
     def on_new_ticket(self) -> None:
         """新規チケット作成ボタン押下。"""
         self._view.open_ticket_detail(None)
+
+    # ------------------------------------------------------------------
+    # フィルター永続化
+    # ------------------------------------------------------------------
+
+    def _save_filter(self, condition: FilterCondition) -> None:
+        from datetime import date
+        data = {
+            "assignee_ids": condition.assignee_ids,
+            "status_ids": condition.status_ids,
+            "tag_filters": [
+                {"tag_def_id": tf.tag_def_id, "value": tf.value, "operator": tf.operator}
+                for tf in condition.tag_filters
+            ],
+            "start_date_from": condition.start_date_from.isoformat() if condition.start_date_from else None,
+            "start_date_to": condition.start_date_to.isoformat() if condition.start_date_to else None,
+            "end_date_from": condition.end_date_from.isoformat() if condition.end_date_from else None,
+            "end_date_to": condition.end_date_to.isoformat() if condition.end_date_to else None,
+        }
+        try:
+            self._settings_repo.set(_SETTINGS_KEY_KANBAN_FILTER, json.dumps(data, ensure_ascii=False))
+        except Exception:
+            pass
+
+    def _load_filter(self) -> FilterCondition | None:
+        from datetime import date
+        raw = self._settings_repo.get(_SETTINGS_KEY_KANBAN_FILTER)
+        if raw is None:
+            return None
+        try:
+            data = json.loads(raw)
+            def _parse_date(s):
+                return date.fromisoformat(s) if s else None
+            return FilterCondition(
+                assignee_ids=data.get("assignee_ids", []),
+                status_ids=data.get("status_ids", []),
+                tag_filters=[
+                    TagFilter(tf["tag_def_id"], tf["value"], tf["operator"])
+                    for tf in data.get("tag_filters", [])
+                ],
+                start_date_from=_parse_date(data.get("start_date_from")),
+                start_date_to=_parse_date(data.get("start_date_to")),
+                end_date_from=_parse_date(data.get("end_date_from")),
+                end_date_to=_parse_date(data.get("end_date_to")),
+            )
+        except Exception:
+            return None
 
     # ------------------------------------------------------------------
     # 内部描画ヘルパー
