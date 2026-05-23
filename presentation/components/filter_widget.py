@@ -55,16 +55,44 @@ class FilterWidget(QWidget):
 
         # 担当者グループ
         self._member_group = QGroupBox("担当者")
+        member_outer = QVBoxLayout()
+        member_outer.setSpacing(2)
+        member_btn_row = QHBoxLayout()
+        member_all_btn = QPushButton("全選択")
+        member_all_btn.setFixedHeight(20)
+        member_none_btn = QPushButton("全解除")
+        member_none_btn.setFixedHeight(20)
+        member_all_btn.clicked.connect(lambda: self._set_all_checks(self._member_checks, True))
+        member_none_btn.clicked.connect(lambda: self._set_all_checks(self._member_checks, False))
+        member_btn_row.addWidget(member_all_btn)
+        member_btn_row.addWidget(member_none_btn)
+        member_btn_row.addStretch()
+        member_outer.addLayout(member_btn_row)
         self._member_inner = QHBoxLayout()
         self._member_inner.setSpacing(4)
-        self._member_group.setLayout(self._member_inner)
+        member_outer.addLayout(self._member_inner)
+        self._member_group.setLayout(member_outer)
         layout.addWidget(self._member_group)
 
         # ステータスグループ
         self._status_group = QGroupBox("ステータス")
+        status_outer = QVBoxLayout()
+        status_outer.setSpacing(2)
+        status_btn_row = QHBoxLayout()
+        status_all_btn = QPushButton("全選択")
+        status_all_btn.setFixedHeight(20)
+        status_none_btn = QPushButton("全解除")
+        status_none_btn.setFixedHeight(20)
+        status_all_btn.clicked.connect(lambda: self._set_all_checks(self._status_checks, True))
+        status_none_btn.clicked.connect(lambda: self._set_all_checks(self._status_checks, False))
+        status_btn_row.addWidget(status_all_btn)
+        status_btn_row.addWidget(status_none_btn)
+        status_btn_row.addStretch()
+        status_outer.addLayout(status_btn_row)
         self._status_inner = QHBoxLayout()
         self._status_inner.setSpacing(4)
-        self._status_group.setLayout(self._status_inner)
+        status_outer.addLayout(self._status_inner)
+        self._status_group.setLayout(status_outer)
         layout.addWidget(self._status_group)
 
         # タグ条件グループ
@@ -228,6 +256,13 @@ class FilterWidget(QWidget):
     def _remove_tag_row(self, row: "_TagFilterRow") -> None:
         self._tag_filter_rows.remove(row)
         row.setParent(None)
+        self._emit_changed()
+
+    def _set_all_checks(self, store: list, checked: bool) -> None:
+        for cb, _ in store:
+            cb.blockSignals(True)
+            cb.setChecked(checked)
+            cb.blockSignals(False)
         self._emit_changed()
 
     def _emit_changed(self) -> None:
